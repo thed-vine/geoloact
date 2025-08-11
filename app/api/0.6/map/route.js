@@ -1,5 +1,3 @@
-import { Server } from 'ws';
-
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
@@ -43,22 +41,6 @@ function jsonError(message, status = 400) {
     },
   });
 }
-
-const wss = new Server({ port: 8080 });
-
-wss.on('connection', (ws) => {
-  console.log('Client connected');
-
-  ws.on('message', (message) => {
-    console.log(`Received: ${message}`);
-    // Echo the message back to the client
-    ws.send(`Server received: ${message}`);
-  });
-
-  ws.on('close', () => {
-    console.log('Client disconnected');
-  });
-});
 
 function adjustBBoxForZoom(bbox, zoomLevel) {
   const [minLon, minLat, maxLon, maxLat] = bbox;
