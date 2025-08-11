@@ -1,3 +1,5 @@
+import { Server } from 'ws';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
@@ -42,9 +44,43 @@ function jsonError(message, status = 400) {
   });
 }
 
+const wss = new Server({ port: 8080 });
+
+wss.on('connection', (ws) => {
+  console.log('Client connected');
+
+  ws.on('message', (message) => {
+    console.log(`Received: ${message}`);
+    // Echo the message back to the client
+    ws.send(`Server received: ${message}`);
+  });
+
+  ws.on('close', () => {
+    console.log('Client disconnected');
+  });
+});
+
+function adjustBBoxForZoom(bbox, zoomLevel) {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  const zoomFactor = Math.pow(2, zoomLevel);
+  const centerLon = (minLon + maxLon) / 2;
+  const centerLat = (minLat + maxLat) / 2;
+  const lonRange = (maxLon - minLon) / zoomFactor;
+  const latRange = (maxLat - minLat) / zoomFactor;
+
+  return [
+    centerLon - lonRange / 2,
+    centerLat - latRange / 2,
+    centerLon + lonRange / 2,
+    centerLat + latRange / 2,
+  ];
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const bboxParam = searchParams.get('bbox');
+  const zoomParam = searchParams.get('zoom');
+
   if (!bboxParam) {
     return jsonError('Missing required query parameter: bbox={min_lon},{min_lat},{max_lon},{max_lat}');
   }
@@ -59,7 +95,17 @@ export async function GET(request) {
     return jsonError(validationMsg);
   }
 
-  const url = `${OSM_MAP_ENDPOINT}?bbox=${bbox.join(',')}`;
+  let adjustedBBox = bbox;
+  if (zoomParam) {
+    const zoomLevel = parseInt(zoomParam, 10);
+    if (Number.isFinite(zoomLevel) && zoomLevel >= 0) {
+      adjustedBBox = adjustBBoxForZoom(bbox, zoomLevel);
+    } else {
+      return jsonError('Invalid zoom level. Expected a non-negative integer.');
+    }
+  }
+
+  const url = `${OSM_MAP_ENDPOINT}?bbox=${adjustedBBox.join(',')}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout

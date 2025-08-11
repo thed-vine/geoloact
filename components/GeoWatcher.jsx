@@ -1,68 +1,82 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import geolo from "@/components/geolo"; // keep your existing formatter module
-
-// Lightweight map preview using OSM raster tiles, no external libs
-const TILE_SIZE = 256;
+import { useEffect, useState, useRef } from "react";
+import geolo from "@/components/geolo";
+import "leaflet/dist/leaflet.css";
 
 function isFiniteNumber(n) {
   return typeof n === "number" && Number.isFinite(n);
 }
 
-function latLonToTileCoords(lat, lon, z) {
-  const latRad = (lat * Math.PI) / 180;
-  const n = Math.pow(2, z);
-  const x = ((lon + 180) / 360) * n;
-  const y = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
-  const tileX = Math.floor(x);
-  const tileY = Math.floor(y);
-  const xOffset = Math.floor((x - tileX) * TILE_SIZE);
-  const yOffset = Math.floor((y - tileY) * TILE_SIZE);
-  return { tileX, tileY, xOffset, yOffset };
-}
+function MapPreview({ lat, lon, heading, zoom = 17, size = 320 }) {
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const mapContainerId = "map-preview-container";
 
-function MapPreview({ lat, lon, zoom = 15, size = 320 }) {
-  if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) {
-    return (
-      <div
-        className="relative flex items-center justify-center bg-gray-100 text-gray-500"
-        style={{ width: size, height: size }}
-      >
-        Waiting for location...
-        <div className="absolute bottom-1 right-2 text-[10px] bg-white/80 px-1 rounded">
-          © OpenStreetMap contributors
-        </div>
-      </div>
-    );
-  }
-
-  const { tileX, tileY, xOffset, yOffset } = latLonToTileCoords(lat, lon, zoom);
-  const url = `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`;
+  useEffect(() => {
+    let leaflet;
+    let map;
+    let marker;
+    let icon;
+    let initialized = false;
+    (async () => {
+      leaflet = await import("leaflet");
+      if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) return;
+      // Custom marker with heading arrow
+      icon = leaflet.divIcon({
+        className: "user-marker",
+        html: `<div style=\"transform: rotate(${isFiniteNumber(heading) ? heading : 0}deg);\">
+          <svg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">
+            <circle cx=\"16\" cy=\"16\" r=\"10\" fill=\"#fff\" stroke=\"#d00\" stroke-width=\"3\"/>
+            <polygon points=\"16,6 20,20 16,16 12,20\" fill=\"#d00\" />
+          </svg>
+        </div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+      if (!mapRef.current) {
+        map = leaflet.map(mapContainerId, {
+          center: [lat, lon],
+          zoom,
+          zoomControl: true,
+          attributionControl: false,
+        });
+        leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap contributors",
+          maxZoom: 19,
+        }).addTo(map);
+        marker = leaflet.marker([lat, lon], { icon }).addTo(map);
+        mapRef.current = map;
+        markerRef.current = marker;
+        initialized = true;
+      } else {
+        map = mapRef.current;
+        marker = markerRef.current;
+        map.setView([lat, lon], map.getZoom());
+        marker.setLatLng([lat, lon]);
+        marker.setIcon(icon);
+      }
+    })();
+    return () => {
+      if (mapRef.current && !initialized) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, [lat, lon, heading]);
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <img
-        src={url}
-        alt="Map tile"
-        className="absolute inset-0 w-full h-full object-cover"
-        crossOrigin="anonymous"
-      />
-      {/* Marker */}
-      <div
-        className="absolute"
-        style={{
-          left: xOffset,
-          top: yOffset,
-          transform: "translate(-50%, -50%)",
-        }}
-      >
-        <div className="w-4 h-4 rounded-full bg-red-600 border-2 border-white shadow" />
-      </div>
-      {/* Attribution */}
-      <div className="absolute bottom-1 right-2 text-[10px] bg-white/80 px-1 rounded">
-        © OpenStreetMap contributors
-      </div>
+    <div
+      id={mapContainerId}
+      style={{ width: size, height: size, borderRadius: 8, overflow: "hidden" }}
+      className="shadow"
+    >
+      {!isFiniteNumber(lat) || !isFiniteNumber(lon) ? (
+        <div className="flex items-center justify-center w-full h-full text-gray-500 bg-gray-100">
+          Waiting for location...
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -84,11 +98,9 @@ export default function GeoWatcher() {
 
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        // Format success position with your existing formatter
         setResult(geolo(pos));
       },
       (err) => {
-        // Format error with your existing formatter
         setResult(geolo(err));
       },
       {
@@ -156,7 +168,11 @@ export default function GeoWatcher() {
 
         {/* Map */}
         <div className="p-4 rounded border border-gray-300 flex items-center justify-center">
-          <MapPreview lat={result?.coords?.latitude} lon={result?.coords?.longitude} />
+          <MapPreview
+            lat={result?.coords?.latitude}
+            lon={result?.coords?.longitude}
+            heading={result?.coords?.heading}
+          />
         </div>
       </div>
     </div>

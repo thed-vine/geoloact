@@ -81,11 +81,11 @@ export default function geolo(input) {
     // Timestamp: prefer provided finite timestamp, else now
     const ts = isFiniteNumber(input.timestamp) ? Number(input.timestamp) : Date.now();
 
-    const latStr = latitude.toFixed(6);
-    const lonStr = longitude.toFixed(6);
+    const latStr = latitude.toString();
+    const lonStr = longitude.toString();
     let msg = `Latitude: ${latStr}°, Longitude: ${lonStr}°`;
     if (typeof accuracy === 'number') {
-      msg += ` (±${Math.round(accuracy)} m)`;
+      msg += ` (±${accuracy} m)`;
     }
 
     /** @type {NormalizedSuccess} */
