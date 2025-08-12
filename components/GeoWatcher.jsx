@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import checkAddressExists from "@/components/AddressCheck";
 import geolo from "@/components/geolo";
 import "leaflet/dist/leaflet.css";
 
@@ -87,6 +88,7 @@ export default function GeoWatcher() {
   const [watchId, setWatchId] = useState(null);
   const [address, setAddress] = useState("");
   const [osmAddress, setOsmAddress] = useState("");
+  const [psAddress, setPsAddress] = useState("");
   const addressIntervalRef = useRef(null);
 
   // Manual input states
@@ -94,17 +96,40 @@ export default function GeoWatcher() {
   const [inputLon, setInputLon] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [manualOsmAddress, setManualOsmAddress] = useState("");
+  const [manualPsAddress, setManualPsAddress] = useState("");
   const [manualLoading, setManualLoading] = useState(false);
+  const [file, setFile] = useState(null);
+
+  function handleFileChange(e) {
+    setFile(e.target.files[0]); // First selected file
+  }
+
+  async function handleUpload() {
+    if (!file) return alert("Please select a file first!");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    console.log("Upload response:", data);
+  }
 
   async function handleManualLookup() {
     setManualLoading(true);
     setManualAddress("");
     setManualOsmAddress("");
+    setManualPsAddress("");
     const lat = inputLat.trim();
     const lon = inputLon.trim();
     if (!lat || !lon || isNaN(Number(lat)) || isNaN(Number(lon))) {
       setManualAddress("Invalid coordinates");
       setManualOsmAddress("");
+      setManualPsAddress("");
       setManualLoading(false);
       return;
     }
@@ -127,6 +152,20 @@ export default function GeoWatcher() {
       setManualOsmAddress(osmData.display_name || "OSM address not found");
     } catch (e) {
       setManualOsmAddress("OSM address lookup failed");
+    }
+    try {
+      const psResp = await fetch(
+        `http://api.positionstack.com/v1/reverse?access_key=3a1b6e9369bc2402d14c5f12d24560ed&query=${lat},${lon}`
+      );
+      if (!psResp.ok) throw new Error("Failed to fetch Position Stack address");
+      const psData = await psResp.json();
+      setManualPsAddress(
+        psData.data && psData.data.length > 0 && psData.data[0].label
+          ? psData.data[0].label
+          : "Position Stack address not found"
+      );
+    } catch (e) {
+      setManualPsAddress("Position Stack address lookup failed");
     }
     setManualLoading(false);
   }
@@ -177,6 +216,7 @@ export default function GeoWatcher() {
       if (!lat || !lon) {
         setAddress("");
         setOsmAddress("");
+        setPsAddress("");
         return;
       }
       try {
@@ -200,6 +240,21 @@ export default function GeoWatcher() {
       } catch (e) {
         setOsmAddress("OSM address lookup failed");
       }
+      // Fetch Position Stack address
+      try {
+        const psResp = await fetch(
+          `http://api.positionstack.com/v1/reverse?access_key=YOUR_ACCESS_KEY&query=${lat},${lon}`
+        );
+        if (!psResp.ok) throw new Error("Failed to fetch Position Stack address");
+        const psData = await psResp.json();
+        setPsAddress(
+          psData.data && psData.data.length > 0 && psData.data[0].label
+            ? psData.data[0].label
+            : "Position Stack address not found"
+        );
+      } catch (e) {
+        setPsAddress("Position Stack address lookup failed");
+      }
     }
 
     if (result && result.coords) {
@@ -214,6 +269,7 @@ export default function GeoWatcher() {
     } else {
       setAddress("");
       setOsmAddress("");
+      setPsAddress("");
       if (addressIntervalRef.current) {
         clearInterval(addressIntervalRef.current);
       }
@@ -234,6 +290,13 @@ export default function GeoWatcher() {
         </p>
       </div>
     );
+  }
+
+  const [exists, setExists] = useState(null);
+
+  async function handleCheck() {
+    const found = await checkAddressExists(address);
+    setExists(found);
   }
 
   return (
@@ -264,7 +327,7 @@ export default function GeoWatcher() {
             {manualLoading ? "Looking up..." : "Find Address"}
           </button>
         </div>
-        {(manualAddress || manualOsmAddress) && (
+        {(manualAddress || manualOsmAddress || manualPsAddress) && (
           <div className="mt-2">
             <div className="text-xs text-white">
               <span className="font-semibold">Address:</span> {manualAddress}
@@ -272,10 +335,31 @@ export default function GeoWatcher() {
             <div className="text-xs text-white mt-1">
               <span className="font-semibold">OSM Address:</span> {manualOsmAddress}
             </div>
+            <div className="text-xs text-white mt-1">
+              <span className="font-semibold">Position Stack Address:</span> {manualPsAddress}
+            </div>
           </div>
         )}
       </div>
+      <div>
+        <h1 className="text-2xl font-bold mb-4">Input Address File</h1>
+        <input type="file" onChange={handleFileChange}/>
+        <button onClick={handleUpload}>Upload</button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input
+        type="text"
+        placeholder="Enter Nigerian address"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+      />
+      <button onClick={handleCheck}>Check Address</button>
+
+      {exists !== null && (
+        <p>
+          {exists ? "✅ Yes" : "❌ No"}
+        </p>
+      )}
         {/* Card */}
         <div className="p-4 rounded border border-gray-300">
           <h2 className="text-lg font-semibold mb-2">Live location (watchPosition)</h2>
@@ -309,6 +393,11 @@ export default function GeoWatcher() {
               {result.coords && (
                 <div className="text-md text-gray-200 mt-1">
                   <span className="font-semibold">OSM Address:</span> {osmAddress || "Looking up OSM address..."}
+                </div>
+              )}
+              {result.coords && (
+                <div className="text-md text-gray-200 mt-1">
+                  <span className="font-semibold">Position Stack Address:</span> {psAddress || "Looking up Position Stack address..."}
                 </div>
               )}
             </div>
