@@ -303,7 +303,7 @@ export default function GeoWatcher() {
               )}
               {result.coords && (
                 <div className="text-md text-gray-200 mt-2">
-                  <span className="font-semibold">Address:</span> {address || "Looking up address..."}
+                  <span className="font-semibold">Location IQ Address:</span> {address || "Looking up address..."}
                 </div>
               )}
               {result.coords && (
