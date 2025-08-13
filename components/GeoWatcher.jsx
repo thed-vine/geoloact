@@ -99,7 +99,12 @@ export default function GeoWatcher() {
   const [manualPsAddress, setManualPsAddress] = useState("");
   const [manualLoading, setManualLoading] = useState(false);
   const [file, setFile] = useState(null);
-
+  const [exists, setExists] = useState(null);
+  const [inputAddress, setInputAddress] = useState("");
+  const [geocodedCoords, setGeocodedCoords] = useState(null);
+  const [geocodeError, setGeocodeError] = useState(null);
+  const [geocodeLoading, setGeocodeLoading] = useState(false);
+  
   function handleFileChange(e) {
     setFile(e.target.files[0]); // First selected file
   }
@@ -168,6 +173,39 @@ export default function GeoWatcher() {
       setManualPsAddress("Position Stack address lookup failed");
     }
     setManualLoading(false);
+  }
+
+  async function geocodeAddress(addr) {
+    const query = (addr || "").trim();
+    setGeocodeError(null);
+    setGeocodedCoords(null);
+    if (!query) {
+      return;
+    }
+    setGeocodeLoading(true);
+    try {
+      const resp = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`
+      );
+      if (!resp.ok) throw new Error("Failed to fetch coordinates");
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const first = data[0];
+        const lat = parseFloat(first.lat);
+        const lon = parseFloat(first.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          setGeocodedCoords({ lat, lon });
+        } else {
+          setGeocodeError("No coordinates found");
+        }
+      } else {
+        setGeocodeError("No coordinates found");
+      }
+    } catch (e) {
+      setGeocodeError("Geocoding failed");
+    } finally {
+      setGeocodeLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -292,11 +330,11 @@ export default function GeoWatcher() {
     );
   }
 
-  const [exists, setExists] = useState(null);
-
+  
   async function handleCheck() {
-    const found = await checkAddressExists(address);
+    const found = await checkAddressExists(inputAddress);
     setExists(found);
+    await geocodeAddress(inputAddress);
   }
 
   return (
@@ -346,20 +384,33 @@ export default function GeoWatcher() {
         <input type="file" onChange={handleFileChange}/>
         <button onClick={handleUpload}>Upload</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="w-full py-5 grid grid-cols-1 md:grid-cols-2 gap-2">
         <input
         type="text"
         placeholder="Enter Nigerian address"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-      />
-      <button onClick={handleCheck}>Check Address</button>
+        className="border border-white"
+        value={inputAddress}
+        onChange={(e) => setInputAddress(e.target.value)}
+        />
+        <button onClick={handleCheck}>Check Address</button>
 
-      {exists !== null && (
+        {exists !== null && (
+        <div>
         <p>
-          {exists ? "✅ Yes" : "❌ No"}
+        {exists ? "✅ Yes" : "❌ No"}
         </p>
-      )}
+        {geocodeLoading && (
+        <p className="text-xs text-gray-500">Looking up coordinates...</p>
+        )}
+        {!geocodeLoading && geocodedCoords && (
+        <p className="text-xs">Coords: {geocodedCoords.lat}, {geocodedCoords.lon}</p>
+        )}
+        {!geocodeLoading && geocodeError && (
+        <p className="text-xs text-red-500">{geocodeError}</p>
+        )}
+        </div>
+        )}
+      </div>
         {/* Card */}
         <div className="p-4 rounded border border-gray-300">
           <h2 className="text-lg font-semibold mb-2">Live location (watchPosition)</h2>
@@ -413,6 +464,5 @@ export default function GeoWatcher() {
           />
         </div>
       </div>
-    </div>
   );
 }
