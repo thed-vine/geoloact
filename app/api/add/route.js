@@ -46,10 +46,13 @@ async function geocodeAddress(address) {
     return { lat, lon };
 }
 
-export async function POST(request) {
+export async function GET(request) {
     try {
-        const body = await request.json();
-        const { userLat, userLon, address, tolerance = 80 } = body;
+        const { searchParams } = new URL(request.url);
+        const userLat = searchParams.get('userLat');
+        const userLon = searchParams.get('userLon');
+        const address = searchParams.get('address');
+        const tolerance = searchParams.get('tolerance') || '80';
 
         // Validate required fields
         if (!userLat || !userLon || !address) {
@@ -120,15 +123,88 @@ export async function POST(request) {
     }
 }
 
-export async function GET() {
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    
+    // If parameters are provided, process the request
+    if (searchParams.get('userLat') && searchParams.get('userLon') && searchParams.get('address')) {
+        try {
+            const userLat = searchParams.get('userLat');
+            const userLon = searchParams.get('userLon');
+            const address = searchParams.get('address');
+            const tolerance = searchParams.get('tolerance') || '80';
+
+            // Validate coordinates are numbers
+            const lat = parseFloat(userLat);
+            const lon = parseFloat(userLon);
+            if (isNaN(lat) || isNaN(lon)) {
+                return NextResponse.json(
+                    { error: "Invalid coordinates: userLat and userLon must be valid numbers" },
+                    { status: 400 }
+                );
+            }
+
+            // Validate tolerance
+            const toleranceMeters = parseFloat(tolerance);
+            if (isNaN(toleranceMeters) || toleranceMeters <= 0) {
+                return NextResponse.json(
+                    { error: "Invalid tolerance: must be a positive number" },
+                    { status: 400 }
+                );
+            }
+
+            // Geocode the address
+            const targetCoords = await geocodeAddress(address);
+            
+            // Calculate distance
+            const distance = haversineDistanceMeters(
+                lat,
+                lon,
+                targetCoords.lat,
+                targetCoords.lon
+            );
+
+            // Check if it matches within tolerance
+            const matched = distance <= toleranceMeters;
+
+            return NextResponse.json({
+                success: true,
+                matched,
+                distanceMeters: distance,
+                targetCoords: {
+                    lat: targetCoords.lat,
+                    lon: targetCoords.lon
+                },
+                userCoords: {
+                    lat: lat,
+                    lon: lon
+                },
+                toleranceMeters
+            });
+
+        } catch (error) {
+            console.error('Address verification error:', error);
+            
+            return NextResponse.json(
+                { 
+                    success: false,
+                    error: error.message || "Failed to verify address" 
+                },
+                { status: 500 }
+            );
+        }
+    }
+    
+    // If no parameters, show documentation
     return NextResponse.json({
         message: "Address Verification API",
         usage: {
-            method: "POST",
-            body: {
+            method: "GET",
+            url: "/api/add?userLat=40.7128&userLon=-74.0060&address=Times Square, NY&tolerance=80",
+            parameters: {
                 userLat: "number (required) - User's latitude",
                 userLon: "number (required) - User's longitude", 
-                address: "string (required) - Address to verify",
+                address: "string (required) - Address to verify (URL encoded)",
                 tolerance: "number (optional) - Tolerance in meters, default: 80"
             },
             response: {
@@ -138,7 +214,11 @@ export async function GET() {
                 targetCoords: "object - Coordinates of the address",
                 userCoords: "object - User's coordinates",
                 toleranceMeters: "number - Tolerance used for matching"
-            }
+            },
+            examples: [
+                "https://your-domain.vercel.app/api/add?userLat=40.7128&userLon=-74.0060&address=Times Square, NY",
+                "https://your-domain.vercel.app/api/add?userLat=40.7589&userLon=-73.9851&address=Empire State Building&tolerance=100"
+            ]
         }
     });
 }
