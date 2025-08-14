@@ -49,25 +49,25 @@ async function geocodeAddress(address) {
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
-        const userLat = searchParams.get('userLat');
-        const userLon = searchParams.get('userLon');
+        const mbeLat = searchParams.get('mbeLat');
+        const mbeLon = searchParams.get('mbeLon');
         const address = searchParams.get('address');
         const tolerance = searchParams.get('tolerance') || '80';
 
         // Validate required fields
-        if (!userLat || !userLon || !address) {
+        if (!mbeLat || !mbeLon || !address) {
             return NextResponse.json(
-                { error: "Missing required fields: userLat, userLon, and address are required" },
+                { error: "Missing required fields: mbeLat, mbeLon, and address are required" },
                 { status: 400 }
             );
         }
 
         // Validate coordinates are numbers
-        const lat = parseFloat(userLat);
-        const lon = parseFloat(userLon);
+        const lat = parseFloat(mbeLat);
+        const lon = parseFloat(mbeLon);
         if (isNaN(lat) || isNaN(lon)) {
             return NextResponse.json(
-                { error: "Invalid coordinates: userLat and userLon must be valid numbers" },
+                { error: "Invalid coordinates: mbeLat and mbeLon must be valid numbers" },
                 { status: 400 }
             );
         }
@@ -127,19 +127,19 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     
     // If parameters are provided, process the request
-    if (searchParams.get('userLat') && searchParams.get('userLon') && searchParams.get('address')) {
+    if (searchParams.get('mbeLat') && searchParams.get('mbeLon') && searchParams.get('address')) {
         try {
-            const userLat = searchParams.get('userLat');
-            const userLon = searchParams.get('userLon');
+            const mbeLat = searchParams.get('mbeLat');
+            const mbeLon = searchParams.get('mbeLon');
             const address = searchParams.get('address');
             const tolerance = searchParams.get('tolerance') || '80';
 
             // Validate coordinates are numbers
-            const lat = parseFloat(userLat);
-            const lon = parseFloat(userLon);
+            const lat = parseFloat(mbeLat);
+            const lon = parseFloat(mbeLon);
             if (isNaN(lat) || isNaN(lon)) {
                 return NextResponse.json(
-                    { error: "Invalid coordinates: userLat and userLon must be valid numbers" },
+                    { error: "Invalid coordinates: mbeLat and mbeLon must be valid numbers" },
                     { status: 400 }
                 );
             }
@@ -200,10 +200,10 @@ export async function GET(request) {
         message: "Address Verification API",
         usage: {
             method: "GET",
-            url: "/api/add?userLat=40.7128&userLon=-74.0060&address=Times Square, NY&tolerance=80",
+            url: "/api/add?mbeLat=40.7128&mbeLon=-74.0060&address=Times Square, NY&tolerance=80",
             parameters: {
-                userLat: "number (required) - User's latitude",
-                userLon: "number (required) - User's longitude", 
+                mbeLat: "number (required) - User's latitude",
+                mbeLon: "number (required) - User's longitude", 
                 address: "string (required) - Address to verify (URL encoded)",
                 tolerance: "number (optional) - Tolerance in meters, default: 80"
             },
@@ -216,8 +216,8 @@ export async function GET(request) {
                 toleranceMeters: "number - Tolerance used for matching"
             },
             examples: [
-                "https://your-domain.vercel.app/api/add?userLat=40.7128&userLon=-74.0060&address=Times Square, NY",
-                "https://your-domain.vercel.app/api/add?userLat=40.7589&userLon=-73.9851&address=Empire State Building&tolerance=100"
+                "https://your-domain.vercel.app/api/add?mbeLat=40.7128&mbeLon=-74.0060&address=Times Square, NY",
+                "https://your-domain.vercel.app/api/add?mbeLat=40.7589&mbeLon=-73.9851&address=Empire State Building&tolerance=100"
             ]
         }
     });
