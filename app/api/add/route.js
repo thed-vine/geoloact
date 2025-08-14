@@ -49,25 +49,29 @@ async function geocodeAddress(address) {
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
+        const customerLat = searchParams.get('customerLat');
+        const customerLon = searchParams.get('customerLon');
         const mbeLat = searchParams.get('mbeLat');
         const mbeLon = searchParams.get('mbeLon');
-        const address = searchParams.get('address');
         const tolerance = searchParams.get('tolerance') || '80';
 
         // Validate required fields
-        if (!mbeLat || !mbeLon || !address) {
+        if (!customerLat || !customerLon || !mbeLat || !mbeLon) {
             return NextResponse.json(
-                { error: "Missing required fields: mbeLat, mbeLon, and address are required" },
+                { error: "Missing required fields: customerLat, customerLon, mbeLat, and mbeLon are required" },
                 { status: 400 }
             );
         }
 
         // Validate coordinates are numbers
-        const lat = parseFloat(mbeLat);
-        const lon = parseFloat(mbeLon);
-        if (isNaN(lat) || isNaN(lon)) {
+        const lat1 = parseFloat(customerLat);
+        const lon1 = parseFloat(customerLon);
+        const lat2 = parseFloat(mbeLat);
+        const lon2 = parseFloat(mbeLon);
+        
+        if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
             return NextResponse.json(
-                { error: "Invalid coordinates: mbeLat and mbeLon must be valid numbers" },
+                { error: "Invalid coordinates: All coordinates must be valid numbers" },
                 { status: 400 }
             );
         }
@@ -81,42 +85,39 @@ export async function GET(request) {
             );
         }
 
-        // Geocode the address
-        const targetCoords = await geocodeAddress(address);
-        
-        // Calculate distance
+        // Calculate distance between the two coordinates
         const distance = haversineDistanceMeters(
-            lat,
-            lon,
-            targetCoords.lat,
-            targetCoords.lon
+            lat1,
+            lon1,
+            lat2,
+            lon2
         );
 
-        // Check if it matches within tolerance
+        // Check if coordinates match within tolerance
         const matched = distance <= toleranceMeters;
 
         return NextResponse.json({
             success: true,
             matched,
             distanceMeters: distance,
-            targetCoords: {
-                lat: targetCoords.lat,
-                lon: targetCoords.lon
+            customer: {
+                lat: lat1,
+                lon: lon1
             },
-            userCoords: {
-                lat: lat,
-                lon: lon
+            mbe: {
+                lat: lat2,
+                lon: lon2
             },
             toleranceMeters
         });
 
     } catch (error) {
-        console.error('Address verification error:', error);
+        console.error('Coordinate matching error:', error);
         
         return NextResponse.json(
             { 
                 success: false,
-                error: error.message || "Failed to verify address" 
+                error: error.message || "Failed to match coordinates" 
             },
             { status: 500 }
         );
@@ -127,19 +128,23 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     
     // If parameters are provided, process the request
-    if (searchParams.get('mbeLat') && searchParams.get('mbeLon') && searchParams.get('address')) {
+    if (searchParams.get('customerLat') && searchParams.get('customerLon') && searchParams.get('mbeLat') && searchParams.get('mbeLon')) {
         try {
+            const customerLat = searchParams.get('customerLat');
+            const customerLon = searchParams.get('customerLon');
             const mbeLat = searchParams.get('mbeLat');
             const mbeLon = searchParams.get('mbeLon');
-            const address = searchParams.get('address');
             const tolerance = searchParams.get('tolerance') || '80';
 
             // Validate coordinates are numbers
-            const lat = parseFloat(mbeLat);
-            const lon = parseFloat(mbeLon);
-            if (isNaN(lat) || isNaN(lon)) {
+            const lat1 = parseFloat(customerLat);
+            const lon1 = parseFloat(customerLon);
+            const lat2 = parseFloat(mbeLat);
+            const lon2 = parseFloat(mbeLon);
+            
+            if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
                 return NextResponse.json(
-                    { error: "Invalid coordinates: mbeLat and mbeLon must be valid numbers" },
+                    { error: "Invalid coordinates: All coordinates must be valid numbers" },
                     { status: 400 }
                 );
             }
@@ -153,42 +158,39 @@ export async function GET(request) {
                 );
             }
 
-            // Geocode the address
-            const targetCoords = await geocodeAddress(address);
-            
-            // Calculate distance
+            // Calculate distance between the two coordinates
             const distance = haversineDistanceMeters(
-                lat,
-                lon,
-                targetCoords.lat,
-                targetCoords.lon
+                lat1,
+                lon1,
+                lat2,
+                lon2
             );
 
-            // Check if it matches within tolerance
+            // Check if coordinates match within tolerance
             const matched = distance <= toleranceMeters;
 
             return NextResponse.json({
                 success: true,
                 matched,
                 distanceMeters: distance,
-                targetCoords: {
-                    lat: targetCoords.lat,
-                    lon: targetCoords.lon
+                customer: {
+                    lat: lat1,
+                    lon: lon1
                 },
-                userCoords: {
-                    lat: lat,
-                    lon: lon
+                mbe: {
+                    lat: lat2,
+                    lon: lon2
                 },
                 toleranceMeters
             });
 
         } catch (error) {
-            console.error('Address verification error:', error);
+            console.error('Coordinate matching error:', error);
             
             return NextResponse.json(
                 { 
                     success: false,
-                    error: error.message || "Failed to verify address" 
+                    error: error.message || "Failed to match coordinates" 
                 },
                 { status: 500 }
             );
@@ -197,28 +199,25 @@ export async function GET(request) {
     
     // If no parameters, show documentation
     return NextResponse.json({
-        message: "Address Verification API",
+        message: "Coordinate Matching API",
         usage: {
             method: "GET",
-            url: "/api/add?mbeLat=40.7128&mbeLon=-74.0060&address=Times Square, NY&tolerance=80",
+            url: "/api/add?customerLat=40.7128&customerLon=-74.0060&mbeLat=40.7129&mbeLon=-74.0061&tolerance=80",
             parameters: {
-                mbeLat: "number (required) - User's latitude",
-                mbeLon: "number (required) - User's longitude", 
-                address: "string (required) - Address to verify (URL encoded)",
+                customerLat: "number (required) - First coordinate latitude",
+                customerLon: "number (required) - First coordinate longitude", 
+                mbeLat: "number (required) - Second coordinate latitude",
+                mbeLon: "number (required) - Second coordinate longitude",
                 tolerance: "number (optional) - Tolerance in meters, default: 80"
             },
             response: {
                 success: "boolean - Whether the request was successful",
-                matched: "boolean - Whether the address matches within tolerance",
-                distanceMeters: "number - Distance between user and address",
-                targetCoords: "object - Coordinates of the address",
-                userCoords: "object - User's coordinates",
+                matched: "boolean - Whether coordinates match within tolerance",
+                distanceMeters: "number - Distance between the two coordinates",
+                customer: "object - First coordinate set (lat, lon)",
+                mbe: "object - Second coordinate set (lat, lon)",
                 toleranceMeters: "number - Tolerance used for matching"
             },
-            examples: [
-                "https://your-domain.vercel.app/api/add?mbeLat=40.7128&mbeLon=-74.0060&address=Times Square, NY",
-                "https://your-domain.vercel.app/api/add?mbeLat=40.7589&mbeLon=-73.9851&address=Empire State Building&tolerance=100"
-            ]
         }
     });
 }
