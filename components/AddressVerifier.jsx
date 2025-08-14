@@ -139,10 +139,10 @@ export default function AddressVerif() {
             {coordinates && (
                 <div className="text-xs text-gray-600 mt-2 space-y-1">
                     <div>
-                        <span className="font-semibold">Expected coordinates:</span> {coordinates.expected.lat.toFixed(6)}, {coordinates.expected.lon.toFixed(6)}
+                        <span className="font-semibold">Expected coordinates:</span> {coordinates.expected.lat}, {coordinates.expected.lon}
                     </div>
                     <div>
-                        <span className="font-semibold">Your location:</span> {coordinates.current.lat.toFixed(6)}, {coordinates.current.lon.toFixed(6)}
+                        <span className="font-semibold">Your location:</span> {coordinates.current.lat}, {coordinates.current.lon}
                     </div>
                 </div>
             )}
