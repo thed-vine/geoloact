@@ -47,7 +47,7 @@ async function geocodeAddress(address) {
     return { lat, lon };
 }
 
-export async function matchLocationToAddress(userResult, address, toleranceMeters = 20) {
+export async function matchLocationToAddress(userResult, address, toleranceMeters = 80) {
     if (!userResult || userResult.type !== "success" || !userResult.coords) {
         throw new Error("User location is not available");
     }
