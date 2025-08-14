@@ -1,4 +1,6 @@
+import AddressVerif from "@/components/AddressVerifier";
 import GeoWatcher from "@/components/GeoWatcher";
+import GetLocationButton from "@/components/GetLocationButton";
 
 export default function Home() {
   return (
@@ -6,6 +8,7 @@ export default function Home() {
       <h1 className="text-2xl font-bold">Your Location</h1>
       <GeoWatcher />
       <p>I'm watching you</p>
+      <AddressVerif/>
     </main>
   );
 }

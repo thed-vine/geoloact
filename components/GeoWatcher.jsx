@@ -97,6 +97,7 @@ export default function GeoWatcher() {
   const [manualAddress, setManualAddress] = useState("");
   const [manualOsmAddress, setManualOsmAddress] = useState("");
   const [manualPsAddress, setManualPsAddress] = useState("");
+  const [manualGoogleAddress, setManualGoogleAddress] = useState("");
   const [manualLoading, setManualLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [exists, setExists] = useState(null);
@@ -129,11 +130,13 @@ export default function GeoWatcher() {
     setManualAddress("");
     setManualOsmAddress("");
     setManualPsAddress("");
+  setManualGoogleAddress("");
     const lat = inputLat.trim();
     const lon = inputLon.trim();
     if (!lat || !lon || isNaN(Number(lat)) || isNaN(Number(lon))) {
       setManualAddress("Invalid coordinates");
       setManualOsmAddress("");
+      setManualGoogleAddress("");
       setManualPsAddress("");
       setManualLoading(false);
       return;
@@ -171,6 +174,20 @@ export default function GeoWatcher() {
       );
     } catch (e) {
       setManualPsAddress("Position Stack address lookup failed");
+    }
+    try {
+      const googleResp = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyAzZSkv1yHIb_eceBc3y4BmvnMcd6ov3vU`
+      );
+      if (!googleResp.ok) throw new Error("Failed to fetch Google Maps address");
+      const googleData = await googleResp.json();
+      setManualGoogleAddress(
+        googleData.results && googleData.results.length > 0
+          ? googleData.results[0].formatted_address
+          : "Google Maps address not found"
+      );
+    } catch (e) {
+      setManualGoogleAddress("Google Maps address lookup failed");
     }
     setManualLoading(false);
   }
@@ -281,7 +298,7 @@ export default function GeoWatcher() {
       // Fetch Position Stack address
       try {
         const psResp = await fetch(
-          `http://api.positionstack.com/v1/reverse?access_key=YOUR_ACCESS_KEY&query=${lat},${lon}`
+          `http://api.positionstack.com/v1/reverse?access_key=3a1b6e9369bc2402d14c5f12d24560ed&query=${lat},${lon}`
         );
         if (!psResp.ok) throw new Error("Failed to fetch Position Stack address");
         const psData = await psResp.json();
@@ -368,13 +385,16 @@ export default function GeoWatcher() {
         {(manualAddress || manualOsmAddress || manualPsAddress) && (
           <div className="mt-2">
             <div className="text-xs text-white">
-              <span className="font-semibold">Address:</span> {manualAddress}
+              <span className="font-semibold">LocationIQ Address:</span> {manualAddress}
             </div>
             <div className="text-xs text-white mt-1">
               <span className="font-semibold">OSM Address:</span> {manualOsmAddress}
             </div>
             <div className="text-xs text-white mt-1">
               <span className="font-semibold">Position Stack Address:</span> {manualPsAddress}
+            </div>
+            <div className="text-xs text-white mt-1">
+              <span className="font-semibold">GoogleMaps Address: </span> {manualGoogleAddress}
             </div>
           </div>
         )}
