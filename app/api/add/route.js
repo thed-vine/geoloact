@@ -37,32 +37,32 @@ async function getAddressFromCoordinates(lat, lon) {
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
 
-    if (searchParams.get('customerLat') && searchParams.get('customerLon')) {
-        const options = {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0,
-        };
+    // if (searchParams.get('customerLat') && searchParams.get('customerLon')) {
+    //     const options = {
+    //         enableHighAccuracy: true,
+    //         timeout: 5000,
+    //         maximumAge: 0,
+    //     };
 
-        function success(pos) {
-            const crd = pos.coords;
-            console.log('Your current position is:');
-            console.log(`Latitude : ${crd.latitude}`);
-            console.log(`Longitude: ${crd.longitude}`);
-            console.log(`More or less ${crd.accuracy} meters.`);
+    //     function success(pos) {
+    //         const crd = pos.coords;
+    //         console.log('Your current position is:');
+    //         console.log(`Latitude : ${crd.latitude}`);
+    //         console.log(`Longitude: ${crd.longitude}`);
+    //         console.log(`More or less ${crd.accuracy} meters.`);
 
-            if (crd.accuracy <= 5) {
-                navigator.geolocation.clearWatch(watchID);
-                console.log('Desired accuracy reached! The watch has been stopped.');
-            }
-        }
+    //         if (crd.accuracy <= 5) {
+    //             navigator.geolocation.clearWatch(watchID);
+    //             console.log('Desired accuracy reached! The watch has been stopped.');
+    //         }
+    //     }
 
-        function error(err) {
-            console.warn(`ERROR(${err.code}): ${err.message}`);
-        }
+    //     function error(err) {
+    //         console.warn(`ERROR(${err.code}): ${err.message}`);
+    //     }
 
-        const watchID = navigator.geolocation.watchPosition(success, error, options);
-    }
+    //     const watchID = navigator.geolocation.watchPosition(success, error, options);
+    // }
 
     // If parameters are provided, process the request
     if (searchParams.get('customerLat') && searchParams.get('customerLon') && searchParams.get('mbeLat') && searchParams.get('mbeLon')) {
