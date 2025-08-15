@@ -17,13 +17,53 @@ function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-
-
-
+async function getAddressFromCoordinates(lat, lon) {
+    try {
+        const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyAzZSkv1yHIb_eceBc3y4BmvnMcd6ov3vU`
+        );
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+            return data.results[0].formatted_address;
+        } else {
+            return "Address not found";
+        }
+    } catch (error) {
+        console.error("Error fetching address from Google Maps API:", error);
+        return "Failed to fetch address";
+    }
+}
 
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
-    
+
+    if (searchParams.get('customerLat') && searchParams.get('customerLon')) {
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0,
+        };
+
+        function success(pos) {
+            const crd = pos.coords;
+            console.log('Your current position is:');
+            console.log(`Latitude : ${crd.latitude}`);
+            console.log(`Longitude: ${crd.longitude}`);
+            console.log(`More or less ${crd.accuracy} meters.`);
+
+            if (crd.accuracy <= 5) {
+                navigator.geolocation.clearWatch(watchID);
+                console.log('Desired accuracy reached! The watch has been stopped.');
+            }
+        }
+
+        function error(err) {
+            console.warn(`ERROR(${err.code}): ${err.message}`);
+        }
+
+        const watchID = navigator.geolocation.watchPosition(success, error, options);
+    }
+
     // If parameters are provided, process the request
     if (searchParams.get('customerLat') && searchParams.get('customerLon') && searchParams.get('mbeLat') && searchParams.get('mbeLon')) {
         try {
@@ -66,6 +106,8 @@ export async function GET(request) {
             // Check if coordinates match within tolerance
             const matched = distance <= toleranceMeters;
 
+            const mbeAddress = await getAddressFromCoordinates(lat2, lon2);
+
             return NextResponse.json({
                 success: true,
                 matched,
@@ -76,7 +118,8 @@ export async function GET(request) {
                 },
                 mbe: {
                     lat: lat2,
-                    lon: lon2
+                    lon: lon2,
+                    address: mbeAddress
                 },
                 toleranceMeters
             });
@@ -112,7 +155,7 @@ export async function GET(request) {
                 matched: "boolean - Whether coordinates match within tolerance",
                 distanceMeters: "number - Distance between the two coordinates",
                 customer: "object - First coordinate set (lat, lon)",
-                mbe: "object - Second coordinate set (lat, lon)",
+                mbe: "object - Second coordinate set (lat, lon, address)",
                 toleranceMeters: "number - Tolerance used for matching"
             },
         }

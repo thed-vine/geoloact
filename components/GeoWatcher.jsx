@@ -89,6 +89,7 @@ export default function GeoWatcher() {
   const [address, setAddress] = useState("");
   const [osmAddress, setOsmAddress] = useState("");
   const [psAddress, setPsAddress] = useState("");
+  const [googleAddress, setGoogleAddress] = useState("");
   const addressIntervalRef = useRef(null);
 
   // Manual input states
@@ -272,6 +273,7 @@ export default function GeoWatcher() {
         setAddress("");
         setOsmAddress("");
         setPsAddress("");
+        setGoogleAddress("");
         return;
       }
       try {
@@ -310,6 +312,22 @@ export default function GeoWatcher() {
       } catch (e) {
         setPsAddress("Position Stack address lookup failed");
       }
+      
+      // Fetch Google Maps address
+      try {
+        const googleResp = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyAzZSkv1yHIb_eceBc3y4BmvnMcd6ov3vU`
+        );
+        if (!googleResp.ok) throw new Error("Failed to fetch Google Maps address");
+        const googleData = await googleResp.json();
+        setGoogleAddress(
+          googleData.results && googleData.results.length > 0
+            ? googleData.results[0].formatted_address
+            : "Google Maps address not found"
+        );
+      } catch (e) {
+        setGoogleAddress("Google Maps address lookup failed");
+      }
     }
 
     if (result && result.coords) {
@@ -325,6 +343,7 @@ export default function GeoWatcher() {
       setAddress("");
       setOsmAddress("");
       setPsAddress("");
+      setGoogleAddress("");
       if (addressIntervalRef.current) {
         clearInterval(addressIntervalRef.current);
       }
@@ -469,6 +488,11 @@ export default function GeoWatcher() {
               {result.coords && (
                 <div className="text-md text-gray-200 mt-1">
                   <span className="font-semibold">Position Stack Address:</span> {psAddress || "Looking up Position Stack address..."}
+                </div>
+              )}
+              {result.coords && (
+                <div className="text-md text-gray-200 mt-1">
+                  <span className="font-semibold">Google Maps Address:</span> {googleAddress || "Looking up Google Maps address..."}
                 </div>
               )}
             </div>
