@@ -3,34 +3,34 @@ import { NextResponse } from 'next/server';
 async function geocodeAddress(address) {
     const query = (address || "").trim();
     if (!query) throw new Error("Address is empty");
-    
+
     const resp = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
           query
-        )}&key=AIzaSyAzZSkv1yHIb_eceBc3y4BmvnMcd6ov3vU`
+        )}&region=ng&key=AIzaSyAzZSkv1yHIb_eceBc3y4BmvnMcd6ov3vU`
     );
-    
+
     if (!resp.ok) throw new Error("Failed to geocode address");
     const data = await resp.json();
-    
+
     // Check if Google Maps API returned results
     if (!data.results || data.results.length === 0) {
         throw new Error("No coordinates found for address");
     }
-    
+
     // Extract coordinates from Google Maps API response format
     const location = data.results[0].geometry.location;
     const lat = parseFloat(location.lat);
     const lon = parseFloat(location.lng);
-    
+
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
         throw new Error("Invalid coordinates for address");
     }
-    
+
     // Get additional address details
     const addressComponents = data.results[0].address_components || [];
     const formattedAddress = data.results[0].formatted_address || "";
-    
+
     // Extract useful address components
     const addressInfo = {
         street_number: "",
@@ -40,7 +40,7 @@ async function geocodeAddress(address) {
         postal_code: "",
         country: ""
     };
-    
+
     addressComponents.forEach(component => {
         const types = component.types;
         if (types.includes('street_number')) {
@@ -57,7 +57,7 @@ async function geocodeAddress(address) {
             addressInfo.country = component.long_name;
         }
     });
-    
+
     return { 
         lat, 
         lon, 
