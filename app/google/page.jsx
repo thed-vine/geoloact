@@ -114,7 +114,7 @@ export default function Googlee() {
         />
         <button
           onClick={handleSearch}
-          className="mt-2 bg-blue-600 text-white px-4 py-1 rounded"
+          className="mt-2 bg-blue-600 text-gray-100 px-4 py-1 rounded"
         >
           Search
         </button>
