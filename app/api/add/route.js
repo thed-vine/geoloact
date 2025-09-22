@@ -20,7 +20,7 @@ function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
 async function getAddressFromCoordinates(lat, lon) {
     try {
         const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyAzZSkv1yHIb_eceBc3y4BmvnMcd6ov3vU`
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyBRdyveocW0espjSOf9NAWC8MVGYHJETZQ`
         );
         const data = await response.json();
         if (data.results && data.results.length > 0) {

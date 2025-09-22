@@ -7,7 +7,7 @@ async function geocodeAddress(address) {
     const resp = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
           query
-        )}&region=ng&key=AIzaSyAzZSkv1yHIb_eceBc3y4BmvnMcd6ov3vU`
+        )}&region=ng&key=AIzaSyBRdyveocW0espjSOf9NAWC8MVGYHJETZQ`
     );
 
     if (!resp.ok) throw new Error("Failed to geocode address");
